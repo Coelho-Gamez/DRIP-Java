@@ -2,6 +2,8 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.util.ArrayList;
+import java.util.List;
 
 public class DRIP {
     public static void main(String[] args) {
@@ -17,7 +19,7 @@ public class DRIP {
         frame.setLayout(new BorderLayout());
 
         // Create input panel
-        JPanel inputPanel = new JPanel(new GridLayout(15, 2, 10, 10)); // Adjusted for fewer parameters
+        JPanel inputPanel = new JPanel(new GridLayout(15, 2, 10, 10));
 
         // Create input fields and labels
         JLabel annualContributionLabel = new JLabel("Annual contribution ($):");
@@ -63,6 +65,8 @@ public class DRIP {
         JTextField exchangeRateField = new JTextField();
 
         JButton calculateButton = new JButton("Calculate");
+        JButton templateButton = new JButton("Use Template");
+        JButton lightModeButton = new JButton("Light Mode");
         JTextArea resultArea = new JTextArea();
         resultArea.setEditable(false);
 
@@ -100,151 +104,54 @@ public class DRIP {
         inputPanel.add(exchangeRateLabel);
         inputPanel.add(exchangeRateField);
         inputPanel.add(calculateButton);
+        inputPanel.add(templateButton);
 
         // Add panels to the frame
         frame.add(inputPanel, BorderLayout.NORTH);
         frame.add(scrollPane, BorderLayout.CENTER);
+        frame.add(lightModeButton, BorderLayout.SOUTH);
 
-        // Create a Dark Mode button
-        JButton darkModeButton = new JButton("Dark Mode");
-        frame.add(darkModeButton, BorderLayout.SOUTH);
+        // Enable Dark Mode by default
+        final boolean[] isDarkMode = {true};
+        applyDarkMode(frame, inputPanel, resultArea, templateButton, calculateButton, lightModeButton);
 
-        // Add a "Use Template" button
-        JButton templateButton = new JButton("Use Template");
+        // Add action listener to the Light Mode button
+        lightModeButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                isDarkMode[0] = !isDarkMode[0];
+                if (isDarkMode[0]) {
+                    applyDarkMode(frame, inputPanel, resultArea, templateButton, calculateButton, lightModeButton);
+                    lightModeButton.setText("Light Mode");
+                } else {
+                    applyLightMode(frame, inputPanel, resultArea, templateButton, calculateButton, lightModeButton);
+                    lightModeButton.setText("Dark Mode");
+                }
+            }
+        });
 
-        // Add action listener for the "Use Template" button
+        // Add action listener to the Template button
         templateButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                // Set predefined values for testing
-                annualContributionField.setText("300"); // Annual contribution in dollars
-                numStocksField.setText("20");           // Number of stocks
-                stockPriceField.setText("45");          // Price per stock
-                annualDividendField.setText("15");      // Annual dividend yield in percentage
-                dividendFrequencyField.setText("1");    // Dividend payout frequency (times/year)
-                holdingTimeField.setText("12");         // Holding time in years
-                stockGrowthRateField.setText("3");      // Annual stock price growth rate in percentage
-                dividendGrowthRateField.setText("2");   // Annual dividend growth rate in percentage
-                taxRateField.setText("15");             // Tax rate on dividends in percentage
-                capitalGainsTaxRateField.setText("20"); // Capital gains tax rate in percentage
-                inflationRateField.setText("8");        // Inflation rate in percentage
-                reinvestmentRateField.setText("100");   // Reinvestment rate in percentage
-                managementFeeField.setText("1");        // Management fee in percentage
-                exchangeRateField.setText("1");         // Currency exchange rate
+                // Pre-fill fields with example values
+                annualContributionField.setText("5000");
+                numStocksField.setText("100");
+                stockPriceField.setText("50");
+                annualDividendField.setText("3");
+                dividendFrequencyField.setText("4");
+                holdingTimeField.setText("10");
+                stockGrowthRateField.setText("5");
+                dividendGrowthRateField.setText("2");
+                taxRateField.setText("15");
+                capitalGainsTaxRateField.setText("20");
+                inflationRateField.setText("2");
+                reinvestmentRateField.setText("100");
+                managementFeeField.setText("1");
+                exchangeRateField.setText("1");
+                resultArea.setText("Template values have been loaded. You can now calculate!");
             }
         });
-
-        // Add the "Use Template" button to the frame
-        frame.add(templateButton, BorderLayout.EAST);
-
-        // Set Dark Mode as the default
-        frame.getContentPane().setBackground(Color.DARK_GRAY);
-        inputPanel.setBackground(Color.DARK_GRAY);
-        resultArea.setBackground(Color.BLACK);
-        resultArea.setForeground(Color.WHITE);
-
-        // Set initial colors for labels, text fields, and buttons
-        for (Component component : inputPanel.getComponents()) {
-            if (component instanceof JLabel) {
-                component.setForeground(Color.WHITE); // Set label text to white
-            } else if (component instanceof JTextField) {
-                component.setBackground(Color.BLACK); // Set text field background to black
-                component.setForeground(Color.WHITE); // Set text field text to white
-            } else if (component instanceof JButton) {
-                component.setBackground(Color.DARK_GRAY); // Set button background to dark gray
-                component.setForeground(Color.WHITE); // Set button text to white
-            }
-        }
-
-        // Set "Use Template" button colors for Dark Mode
-        templateButton.setBackground(Color.DARK_GRAY); // Dark gray background
-        templateButton.setForeground(Color.WHITE);     // White text
-
-        // Remove the Dark Mode button logic
-        darkModeButton.setVisible(true); // Hide the Dark Mode button
-
-        // Create a Light Mode button
-        JButton lightModeButton = new JButton("Light Mode");
-
-        // Set the Light Mode button to be black on startup
-        lightModeButton.setBackground(Color.BLACK); // Black background
-        lightModeButton.setForeground(Color.WHITE); // White text
-
-        // Add action listener for the Light Mode button
-        lightModeButton.addActionListener(new ActionListener() {
-            private boolean isDarkMode = true; // Track the current mode
-
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                if (isDarkMode) {
-                    // Switch to Light Mode
-                    frame.getContentPane().setBackground(Color.LIGHT_GRAY);
-                    inputPanel.setBackground(Color.LIGHT_GRAY);
-                    resultArea.setBackground(Color.WHITE);
-                    resultArea.setForeground(Color.BLACK);
-
-                    // Update colors for labels, text fields, and buttons
-                    for (Component component : inputPanel.getComponents()) {
-                        if (component instanceof JLabel) {
-                            component.setForeground(Color.BLACK); // Set label text to black
-                        } else if (component instanceof JTextField) {
-                            component.setBackground(Color.WHITE); // Set text field background to white
-                            component.setForeground(Color.BLACK); // Set text field text to black
-                        } else if (component instanceof JButton) {
-                            component.setBackground(Color.LIGHT_GRAY); // Set button background to light gray
-                            component.setForeground(Color.BLACK); // Set button text to black
-                        }
-                    }
-
-                    // Update the "Use Template" button colors
-                    templateButton.setBackground(Color.LIGHT_GRAY); // Light gray background
-                    templateButton.setForeground(Color.BLACK);      // Black text
-
-                    // Update the Light Mode button to appear as a "Dark Mode" button
-                    lightModeButton.setBackground(Color.WHITE); // White background
-                    lightModeButton.setForeground(Color.BLACK); // Black text
-
-                    // Update the button text
-                    lightModeButton.setText("Dark Mode");
-                } else {
-                    // Switch to Dark Mode
-                    frame.getContentPane().setBackground(Color.DARK_GRAY);
-                    inputPanel.setBackground(Color.DARK_GRAY);
-                    resultArea.setBackground(Color.BLACK);
-                    resultArea.setForeground(Color.WHITE);
-
-                    // Update colors for labels, text fields, and buttons
-                    for (Component component : inputPanel.getComponents()) {
-                        if (component instanceof JLabel) {
-                            component.setForeground(Color.WHITE); // Set label text to white
-                        } else if (component instanceof JTextField) {
-                            component.setBackground(Color.BLACK); // Set text field background to black
-                            component.setForeground(Color.WHITE); // Set text field text to white
-                        } else if (component instanceof JButton) {
-                            component.setBackground(Color.DARK_GRAY); // Set button background to dark gray
-                            component.setForeground(Color.WHITE); // Set button text to white
-                        }
-                    }
-
-                    // Update the "Use Template" button colors
-                    templateButton.setBackground(Color.DARK_GRAY); // Dark gray background
-                    templateButton.setForeground(Color.WHITE);     // White text
-
-                    // Update the Light Mode button to appear as a "Light Mode" button
-                    lightModeButton.setBackground(Color.BLACK); // Black background
-                    lightModeButton.setForeground(Color.WHITE); // White text
-
-                    // Update the button text
-                    lightModeButton.setText("Light Mode");
-                }
-
-                // Toggle the mode
-                isDarkMode = !isDarkMode;
-            }
-        });
-
-        // Add the Light Mode button to the frame
-        frame.add(lightModeButton, BorderLayout.SOUTH);
 
         // Add action listener to the Calculate button
         calculateButton.addActionListener(new ActionListener() {
@@ -256,7 +163,7 @@ public class DRIP {
                     double numStocks = Double.parseDouble(numStocksField.getText());
                     double stockPrice = Double.parseDouble(stockPriceField.getText());
                     double annualDividendPercentage = Double.parseDouble(annualDividendField.getText());
-                    int dividendFrequency = Integer.parseInt(dividendFrequencyField.getText());
+                    double dividendFrequency = Double.parseDouble(dividendFrequencyField.getText());
                     double holdingTimeInYears = Double.parseDouble(holdingTimeField.getText());
                     double stockGrowthRate = Double.parseDouble(stockGrowthRateField.getText());
                     double dividendGrowthRate = Double.parseDouble(dividendGrowthRateField.getText());
@@ -276,57 +183,45 @@ public class DRIP {
                         return;
                     }
 
-                    // Calculate total investment in stocks
-                    double totalInvestment = numStocks * stockPrice;
-
                     // Initialize variables for calculations
                     double totalDividend = 0;
-                    double totalStockValue = totalInvestment;
+                    double totalStockValue = numStocks * stockPrice;
                     double annualDividend = (annualDividendPercentage / 100) * stockPrice;
+                    double leftoverCash = 0;
 
-                    // Define column widths for headers
+                    // Initialize lists to track stock purchases
+                    List<Double> stockPurchasePrices = new ArrayList<>();
+                    List<Integer> stockPurchaseCounts = new ArrayList<>();
+
+                    // Column widths for headers
                     final int HEADER_YEAR_WIDTH = 8;
                     final int HEADER_STOCK_PRICE_WIDTH = 15;
-                    final int HEADER_PORTFOLIO_VALUE_WIDTH = 21;
-                    final int HEADER_STOCK_AMOUNT_WIDTH = 17;
+                    final int HEADER_PORTFOLIO_VALUE_WIDTH = 20;
+                    final int HEADER_STOCK_AMOUNT_WIDTH = 15;
                     final int HEADER_INDIVIDUAL_DIV_WIDTH = 20;
-                    final int HEADER_TOTAL_DIVIDENDS_WIDTH = 22;
-                    final int HEADER_TAXED_INCOME_WIDTH = 20;
+                    final int HEADER_TOTAL_DIVIDENDS_WIDTH = 20;
+                    final int HEADER_TAXED_INCOME_WIDTH = 15;
 
-                    // Define column widths for numerical values
-                    final int DATA_YEAR_WIDTH = 6;
-                    final int DATA_STOCK_PRICE_WIDTH = 17;
-                    final int DATA_PORTFOLIO_VALUE_WIDTH = 21;
-                    final int DATA_STOCK_AMOUNT_WIDTH = 23;
-                    final int DATA_INDIVIDUAL_DIV_WIDTH = 22;
+                    // Column widths for data rows
+                    final int DATA_YEAR_WIDTH = 12;
+                    final int DATA_STOCK_PRICE_WIDTH = 22;
+                    final int DATA_PORTFOLIO_VALUE_WIDTH = 25;
+                    final int DATA_STOCK_AMOUNT_WIDTH = 20;
+                    final int DATA_INDIVIDUAL_DIV_WIDTH = 23;
                     final int DATA_TOTAL_DIVIDENDS_WIDTH = 24;
-                    final int DATA_TAXED_INCOME_WIDTH = 26;
-
-                    // Define column headers as constants
-                    final String HEADER_YEAR = "Year";
-                    final String HEADER_STOCK_PRICE = "Stock Price";
-                    final String HEADER_PORTFOLIO_VALUE = "Portfolio Value";
-                    final String HEADER_STOCK_AMOUNT = "Stock Amount";
-                    final String HEADER_INDIVIDUAL_DIV = "Individual Div";
-                    final String HEADER_TOTAL_DIVIDENDS = "Total Dividends";
-                    final String HEADER_TAXED_INCOME = "Taxed Income";
+                    final int DATA_TAXED_INCOME_WIDTH = 12;
 
                     // Prepare result display
                     StringBuilder resultBuilder = new StringBuilder();
                     resultBuilder.append("=== Yearly Investment Summary ===\n");
-
-                    // Append headers using header widths
                     resultBuilder.append(String.format(
-                        "%-" + HEADER_YEAR_WIDTH + "s %" + HEADER_STOCK_PRICE_WIDTH + "s %" + HEADER_PORTFOLIO_VALUE_WIDTH + "s %" + HEADER_STOCK_AMOUNT_WIDTH + "s %" +
-                        HEADER_INDIVIDUAL_DIV_WIDTH + "s %" + HEADER_TOTAL_DIVIDENDS_WIDTH + "s %" + HEADER_TAXED_INCOME_WIDTH + "s\n",
-                        HEADER_YEAR, HEADER_STOCK_PRICE, HEADER_PORTFOLIO_VALUE, HEADER_STOCK_AMOUNT,
-                        HEADER_INDIVIDUAL_DIV, HEADER_TOTAL_DIVIDENDS, HEADER_TAXED_INCOME));
-
-                    // Initialize leftover cash
-                    double leftoverCash = 0;
+                        "%-" + HEADER_YEAR_WIDTH + "s %-" + HEADER_STOCK_PRICE_WIDTH + "s %-" + HEADER_PORTFOLIO_VALUE_WIDTH + "s %-" + HEADER_STOCK_AMOUNT_WIDTH + "s %-" +
+                        HEADER_INDIVIDUAL_DIV_WIDTH + "s %-" + HEADER_TOTAL_DIVIDENDS_WIDTH + "s %-" + HEADER_TAXED_INCOME_WIDTH + "s\n",
+                        "Year", "Stock Price", "Portfolio Value", "Stock Amount",
+                        "Individual Div", "Total Dividends", "Taxed Income"));
 
                     // Simulate growth over the holding period
-                    for (int year = 1; year <= holdingTimeInYears; year++) {
+                    for (double year = 1; year <= holdingTimeInYears; year++) {
                         // Add annual contribution to the total stock value
                         totalStockValue += annualContribution;
 
@@ -335,7 +230,7 @@ public class DRIP {
                         double totalDividendsPerYear = individualDividend * numStocks;
 
                         // Apply a random dividend cut or increase (e.g., ±10%)
-                        double randomDividendAdjustment = (Math.random() * 2 - 1) * 0.1; // Random adjustment between -10% and +10%
+                        double randomDividendAdjustment = (Math.random() * 2 - 1) * 0.1;
                         annualDividend *= (1 + randomDividendAdjustment);
 
                         // Calculate dividends after tax
@@ -349,12 +244,16 @@ public class DRIP {
                         if (totalReinvestment > transactionFee) {
                             totalReinvestment -= transactionFee;
                         } else {
-                            transactionFee = totalReinvestment; // If not enough for fees, use all available cash
+                            transactionFee = totalReinvestment;
                             totalReinvestment = 0;
                         }
 
                         // Calculate the number of new stocks that can be purchased
-                        int newStocks = (int) (totalReinvestment / stockPrice); // Only whole stocks can be purchased
+                        int newStocks = (int) Math.floor(totalReinvestment / stockPrice); // Only whole stocks can be purchased
+                        if (newStocks > 0) {
+                            stockPurchasePrices.add(stockPrice); // Record the price of the new stocks
+                            stockPurchaseCounts.add(newStocks); // Record the number of new stocks
+                        }
                         leftoverCash = totalReinvestment - (newStocks * stockPrice); // Update leftover cash
                         numStocks += newStocks; // Add the new stocks to the total stock count
 
@@ -365,7 +264,7 @@ public class DRIP {
                         totalStockValue *= (1 - managementFee / 100);
 
                         // Apply market volatility to stock price (e.g., ±2%)
-                        double randomStockGrowth = (Math.random() * 2 - 1) * 0.02; // Random adjustment between -2% and +2%
+                        double randomStockGrowth = (Math.random() * 2 - 1) * 0.02;
                         stockPrice *= (1 + stockGrowthRate / 100 + randomStockGrowth);
 
                         // Grow dividend using compound growth
@@ -377,25 +276,47 @@ public class DRIP {
                         // Calculate taxed income (dividends after tax)
                         double taxedIncome = annualDividendAfterTax;
 
-                        // Adjust data widths dynamically based on the number of digits in the year
-                        int adjustedYearWidth = DATA_YEAR_WIDTH - (int) Math.log10(year);
-                        int adjustedIndividualDivWidth = year >= 10 ? DATA_INDIVIDUAL_DIV_WIDTH - 1 : DATA_INDIVIDUAL_DIV_WIDTH;
+                        // Adjust stock amount column width dynamically if stock amount >= 1000
+                        int adjustedStockAmountWidth = (numStocks >= 1000) ? DATA_STOCK_AMOUNT_WIDTH - 1 : DATA_STOCK_AMOUNT_WIDTH;
 
-                        // Append yearly data using adjusted widths
+                        // Adjust year column width dynamically if year >= 10 or year >= 100
+                        int adjustedYearWidth;
+                        if (year >= 100) {
+                            adjustedYearWidth = DATA_YEAR_WIDTH - 2; // Reduce width by 2 for years >= 100
+                        } else if (year >= 10) {
+                            adjustedYearWidth = DATA_YEAR_WIDTH - 1; // Reduce width by 1 for years >= 10
+                        } else {
+                            adjustedYearWidth = DATA_YEAR_WIDTH; // Default width for years < 10
+                        }
+
+                        // Append yearly data with adjusted column widths
                         resultBuilder.append(String.format(
-                            "%-" + adjustedYearWidth + "d %" + DATA_STOCK_PRICE_WIDTH + "s %" + DATA_PORTFOLIO_VALUE_WIDTH + "s %" + DATA_STOCK_AMOUNT_WIDTH + "d %" +
-                            adjustedIndividualDivWidth + "s %" + DATA_TOTAL_DIVIDENDS_WIDTH + "s %" + DATA_TAXED_INCOME_WIDTH + "s\n",
-                            year, formatNumber(stockPrice), formatNumber(portfolioValue), numStocks,
+                            "%-" + adjustedYearWidth + ".0f %-" + DATA_STOCK_PRICE_WIDTH + "s %-" + DATA_PORTFOLIO_VALUE_WIDTH + "s %-" + adjustedStockAmountWidth + "d %-" +
+                            DATA_INDIVIDUAL_DIV_WIDTH + "s %-" + DATA_TOTAL_DIVIDENDS_WIDTH + "s %-" + DATA_TAXED_INCOME_WIDTH + "s\n",
+                            year, formatNumber(stockPrice), formatNumber(portfolioValue), (int) numStocks,
                             formatNumber(individualDividend), formatNumber(totalDividendsPerYear), formatNumber(taxedIncome)));
 
                         // Update total dividends
                         totalDividend += annualDividendAfterTax;
                     }
 
+                    // Calculate capital gains tax
+                    double totalCostBasis = 0; // Total cost basis of all stocks
+                    for (int i = 0; i < stockPurchasePrices.size(); i++) {
+                        totalCostBasis += stockPurchasePrices.get(i) * stockPurchaseCounts.get(i);
+                    }
+                    double capitalGains = totalStockValue - totalCostBasis; // Gains from stock price growth
+                    double capitalGainsTax = capitalGains > 0 ? capitalGains * (capitalGainsTaxRate / 100) : 0; // Apply tax only on positive gains
+
+                    // Deduct capital gains tax from the final portfolio value
+                    totalStockValue -= capitalGainsTax;
+
                     // Append final totals to the summary
                     resultBuilder.append("\n=== Final Totals ===\n");
-                    resultBuilder.append(String.format("%-25s %s\n", "Final Portfolio Value:", formatNumber(totalStockValue)));
-                    resultBuilder.append(String.format("%-25s %s\n", "Total Dividends Earned:", formatNumber(totalDividend)));
+                    resultBuilder.append(String.format("%-25s %10s\n", "Final Portfolio Value:", formatNumber(totalStockValue)));
+                    resultBuilder.append(String.format("%-25s %10s\n", "Total Dividends Earned:", formatNumber(totalDividend)));
+                    resultBuilder.append(String.format("%-25s %10s\n", "Capital Gains Tax Paid:", formatNumber(capitalGainsTax)));
+                    resultBuilder.append(String.format("%-25s %10s\n", "Total Cost Basis:", formatNumber(totalCostBasis)));
 
                     // Display the results
                     resultArea.setText(resultBuilder.toString());
@@ -409,20 +330,76 @@ public class DRIP {
         frame.setVisible(true);
     }
 
-    // Helper method to format numbers with 4 significant figures and abbreviations
+    private static void applyDarkMode(JFrame frame, JPanel inputPanel, JTextArea resultArea, JButton templateButton, JButton calculateButton, JButton lightModeButton) {
+        Color backgroundColor = Color.DARK_GRAY;
+        Color textColor = Color.WHITE;
+        Color buttonBackgroundColor = Color.GRAY;
+        Color buttonTextColor = Color.WHITE;
+
+        frame.getContentPane().setBackground(backgroundColor);
+        inputPanel.setBackground(backgroundColor);
+        resultArea.setBackground(backgroundColor);
+        resultArea.setForeground(textColor);
+
+        for (Component component : inputPanel.getComponents()) {
+            if (component instanceof JLabel) {
+                component.setForeground(textColor);
+            } else if (component instanceof JTextField) {
+                component.setBackground(backgroundColor);
+                component.setForeground(textColor);
+            }
+        }
+
+        templateButton.setBackground(buttonBackgroundColor);
+        templateButton.setForeground(buttonTextColor);
+        calculateButton.setBackground(buttonBackgroundColor);
+        calculateButton.setForeground(buttonTextColor);
+        lightModeButton.setBackground(buttonBackgroundColor);
+        lightModeButton.setForeground(buttonTextColor);
+    }
+
+    private static void applyLightMode(JFrame frame, JPanel inputPanel, JTextArea resultArea, JButton templateButton, JButton calculateButton, JButton lightModeButton) {
+        Color backgroundColor = Color.LIGHT_GRAY;
+        Color textColor = Color.BLACK;
+        Color buttonBackgroundColor = Color.WHITE;
+        Color buttonTextColor = Color.BLACK;
+
+        frame.getContentPane().setBackground(backgroundColor);
+        inputPanel.setBackground(backgroundColor);
+        resultArea.setBackground(Color.WHITE);
+        resultArea.setForeground(textColor);
+
+        for (Component component : inputPanel.getComponents()) {
+            if (component instanceof JLabel) {
+                component.setForeground(textColor);
+            } else if (component instanceof JTextField) {
+                component.setBackground(Color.WHITE);
+                component.setForeground(textColor);
+            }
+        }
+
+        templateButton.setBackground(buttonBackgroundColor);
+        templateButton.setForeground(buttonTextColor);
+        calculateButton.setBackground(buttonBackgroundColor);
+        calculateButton.setForeground(buttonTextColor);
+        lightModeButton.setBackground(buttonBackgroundColor);
+        lightModeButton.setForeground(buttonTextColor);
+    }
+
+    // Helper method to format numbers with suffixes (e.g., k, m, b)
     private static String formatNumber(double value) {
         if (value < 1000) {
-            return String.format("%.4g", value); // No abbreviation for small numbers
+            return String.format("%.4g", value); // Use 4 significant figures for small numbers
         }
-        int exp = (int) (Math.log10(value) / 3); // Determine the exponent for thousands (k, m, b, t, etc.)
-        char[] suffixes = {'k', 'm', 'b', 't', 'q', 'Q', 's', 'S', 'o', 'n'}; // Extended suffixes for higher magnitudes
+        int exp = (int) (Math.log10(value) / 3); // Determine the exponent for thousands (k, m, b, etc.)
+        char[] suffixes = {'k', 'm', 'b', 't'}; // Suffixes for thousands, millions, billions, trillions
 
-        // Ensure exp does not exceed the bounds of the suffixes array
-        if (exp > suffixes.length) {
-            exp = suffixes.length; // Cap at the largest suffix
+        // Ensure the exponent does not exceed the bounds of the suffixes array
+        if (exp >= suffixes.length) {
+            exp = suffixes.length - 1; // Cap at the largest suffix
         }
 
         double scaledValue = value / Math.pow(1000, exp);
-        return String.format("%.4g%s", scaledValue, exp > 0 ? suffixes[exp - 1] : "");
+        return String.format("%.3g%s", scaledValue, suffixes[exp - 1]); // Use 3 significant figures for scaled values
     }
 }
