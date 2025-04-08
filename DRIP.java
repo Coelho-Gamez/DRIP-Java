@@ -2,6 +2,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -15,11 +16,12 @@ public class DRIP {
         // Create the main frame
         JFrame frame = new JFrame("Investment Calculator");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        frame.setSize(screenWidth / 2, (int) (screenHeight * 0.85)); // Occupy half the width and 85% of the height
+        frame.setSize(screenWidth / 2, (int) (screenHeight * 0.75)); // Occupy half the width and 75% of the height
         frame.setLayout(new BorderLayout());
 
-        // Create input panel
-        JPanel inputPanel = new JPanel(new GridLayout(15, 2, 10, 10));
+        // Create input panel with GridLayout
+        JPanel inputPanel = new JPanel(new GridLayout(0, 2, 10, 10)); // 2 columns, 10px horizontal and vertical gaps
+        inputPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10)); // Add padding around the grid
 
         // Create input fields and labels
         JLabel annualContributionLabel = new JLabel("Annual contribution ($):");
@@ -64,16 +66,6 @@ public class DRIP {
         JLabel exchangeRateLabel = new JLabel("Currency exchange rate:");
         JTextField exchangeRateField = new JTextField();
 
-        JButton calculateButton = new JButton("Calculate");
-        JButton templateButton = new JButton("Use Template");
-        JButton lightModeButton = new JButton("Light Mode");
-        JTextArea resultArea = new JTextArea();
-        resultArea.setEditable(false);
-
-        // Wrap the JTextArea in a JScrollPane
-        JScrollPane scrollPane = new JScrollPane(resultArea);
-        scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
-
         // Add components to the input panel
         inputPanel.add(annualContributionLabel);
         inputPanel.add(annualContributionField);
@@ -103,17 +95,34 @@ public class DRIP {
         inputPanel.add(managementFeeField);
         inputPanel.add(exchangeRateLabel);
         inputPanel.add(exchangeRateField);
-        inputPanel.add(calculateButton);
-        inputPanel.add(templateButton);
+
+        // Create buttons and result area
+        JButton calculateButton = new JButton("Calculate");
+        JButton templateButton = new JButton("Use Template");
+        JButton lightModeButton = new JButton("Light Mode");
+        JButton uploadCSVButton = new JButton("Upload CSV");
+        JTextArea resultArea = new JTextArea();
+        resultArea.setEditable(false);
+
+        // Wrap the JTextArea in a JScrollPane
+        JScrollPane scrollPane = new JScrollPane(resultArea);
+        scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
+
+        // Create a button panel
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 10));
+        buttonPanel.add(calculateButton);
+        buttonPanel.add(templateButton);
+        buttonPanel.add(uploadCSVButton);
+        buttonPanel.add(lightModeButton);
 
         // Add panels to the frame
-        frame.add(inputPanel, BorderLayout.NORTH);
-        frame.add(scrollPane, BorderLayout.CENTER);
-        frame.add(lightModeButton, BorderLayout.SOUTH);
+        frame.add(inputPanel, BorderLayout.NORTH); // Input panel at the top
+        frame.add(scrollPane, BorderLayout.CENTER); // Result area in the center
+        frame.add(buttonPanel, BorderLayout.SOUTH); // Buttons at the bottom
 
         // Enable Dark Mode by default
         final boolean[] isDarkMode = {true};
-        applyDarkMode(frame, inputPanel, resultArea, templateButton, calculateButton, lightModeButton);
+        applyDarkMode(frame, inputPanel, resultArea, templateButton, calculateButton, lightModeButton, uploadCSVButton);
 
         // Add action listener to the Light Mode button
         lightModeButton.addActionListener(new ActionListener() {
@@ -121,10 +130,10 @@ public class DRIP {
             public void actionPerformed(ActionEvent e) {
                 isDarkMode[0] = !isDarkMode[0];
                 if (isDarkMode[0]) {
-                    applyDarkMode(frame, inputPanel, resultArea, templateButton, calculateButton, lightModeButton);
+                    applyDarkMode(frame, inputPanel, resultArea, templateButton, calculateButton, lightModeButton, uploadCSVButton);
                     lightModeButton.setText("Light Mode");
                 } else {
-                    applyLightMode(frame, inputPanel, resultArea, templateButton, calculateButton, lightModeButton);
+                    applyLightMode(frame, inputPanel, resultArea, templateButton, calculateButton, lightModeButton, uploadCSVButton);
                     lightModeButton.setText("Dark Mode");
                 }
             }
@@ -210,6 +219,12 @@ public class DRIP {
                     final int DATA_INDIVIDUAL_DIV_WIDTH = 23;
                     final int DATA_TOTAL_DIVIDENDS_WIDTH = 24;
                     final int DATA_TAXED_INCOME_WIDTH = 12;
+
+                    // Column widths for the summary data
+                    final int SUMMARY_PORTFOLIO_WIDTH = 19; // Width for "Final Portfolio Value"
+                    final int SUMMARY_DIVIDENDS_WIDTH = 15; // Width for "Total Dividends Earned"
+                    final int SUMMARY_TAX_WIDTH = 17; // Width for "Capital Gains Tax Paid"
+                    final int SUMMARY_COST_BASIS_WIDTH = 23; // Width for "Cost Basis"
 
                     // Prepare result display
                     StringBuilder resultBuilder = new StringBuilder();
@@ -313,10 +328,10 @@ public class DRIP {
 
                     // Append final totals to the summary
                     resultBuilder.append("\n=== Final Totals ===\n");
-                    resultBuilder.append(String.format("%-25s %10s\n", "Final Portfolio Value:", formatNumber(totalStockValue)));
-                    resultBuilder.append(String.format("%-25s %10s\n", "Total Dividends Earned:", formatNumber(totalDividend)));
-                    resultBuilder.append(String.format("%-25s %10s\n", "Capital Gains Tax Paid:", formatNumber(capitalGainsTax)));
-                    resultBuilder.append(String.format("%-25s %10s\n", "Total Cost Basis:", formatNumber(totalCostBasis)));
+                    resultBuilder.append(String.format("%-25s %" + SUMMARY_PORTFOLIO_WIDTH + "s\n", "Final Portfolio Value:", formatNumber(totalStockValue)));
+                    resultBuilder.append(String.format("%-25s %" + SUMMARY_DIVIDENDS_WIDTH + "s\n", "Total Dividends Earned:", formatNumber(totalDividend)));
+                    resultBuilder.append(String.format("%-25s %" + SUMMARY_TAX_WIDTH + "s\n", "Capital Gains Tax Paid:", formatNumber(capitalGainsTax)));
+                    resultBuilder.append(String.format("%-25s %" + SUMMARY_COST_BASIS_WIDTH + "s\n", "Cost Basis:", formatNumber(totalCostBasis)));
 
                     // Display the results
                     resultArea.setText(resultBuilder.toString());
@@ -326,11 +341,50 @@ public class DRIP {
             }
         });
 
+        // Add action listener to the Upload CSV button
+        uploadCSVButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                JFileChooser fileChooser = new JFileChooser();
+                int result = fileChooser.showOpenDialog(frame);
+                if (result == JFileChooser.APPROVE_OPTION) {
+                    File selectedFile = fileChooser.getSelectedFile();
+                    try (BufferedReader br = new BufferedReader(new FileReader(selectedFile))) {
+                        String line;
+                        while ((line = br.readLine()) != null) {
+                            String[] values = line.split(","); // Assuming CSV is comma-separated
+                            if (values.length >= 14) { // Ensure all fields are present
+                                annualContributionField.setText(values[0]);
+                                numStocksField.setText(values[1]);
+                                stockPriceField.setText(values[2]);
+                                annualDividendField.setText(values[3]);
+                                dividendFrequencyField.setText(values[4]);
+                                holdingTimeField.setText(values[5]);
+                                stockGrowthRateField.setText(values[6]);
+                                dividendGrowthRateField.setText(values[7]);
+                                taxRateField.setText(values[8]);
+                                capitalGainsTaxRateField.setText(values[9]);
+                                inflationRateField.setText(values[10]);
+                                reinvestmentRateField.setText(values[11]);
+                                managementFeeField.setText(values[12]);
+                                exchangeRateField.setText(values[13]);
+                            } else {
+                                resultArea.setText("Error: CSV file does not contain enough fields.");
+                            }
+                        }
+                        resultArea.setText("CSV data loaded successfully. You can now calculate!");
+                    } catch (IOException ex) {
+                        resultArea.setText("Error: Unable to read the CSV file.");
+                    }
+                }
+            }
+        });
+
         // Make the frame visible
         frame.setVisible(true);
     }
 
-    private static void applyDarkMode(JFrame frame, JPanel inputPanel, JTextArea resultArea, JButton templateButton, JButton calculateButton, JButton lightModeButton) {
+    private static void applyDarkMode(JFrame frame, JPanel inputPanel, JTextArea resultArea, JButton templateButton, JButton calculateButton, JButton lightModeButton, JButton uploadCSVButton) {
         Color backgroundColor = Color.DARK_GRAY;
         Color textColor = Color.WHITE;
         Color buttonBackgroundColor = Color.GRAY;
@@ -350,15 +404,24 @@ public class DRIP {
             }
         }
 
+        // Style buttons
         templateButton.setBackground(buttonBackgroundColor);
         templateButton.setForeground(buttonTextColor);
         calculateButton.setBackground(buttonBackgroundColor);
         calculateButton.setForeground(buttonTextColor);
         lightModeButton.setBackground(buttonBackgroundColor);
         lightModeButton.setForeground(buttonTextColor);
+        uploadCSVButton.setBackground(buttonBackgroundColor);
+        uploadCSVButton.setForeground(buttonTextColor);
+
+        // Style button panel
+        JPanel buttonPanel = (JPanel) lightModeButton.getParent();
+        if (buttonPanel != null) {
+            buttonPanel.setBackground(backgroundColor);
+        }
     }
 
-    private static void applyLightMode(JFrame frame, JPanel inputPanel, JTextArea resultArea, JButton templateButton, JButton calculateButton, JButton lightModeButton) {
+    private static void applyLightMode(JFrame frame, JPanel inputPanel, JTextArea resultArea, JButton templateButton, JButton calculateButton, JButton lightModeButton, JButton uploadCSVButton) {
         Color backgroundColor = Color.LIGHT_GRAY;
         Color textColor = Color.BLACK;
         Color buttonBackgroundColor = Color.WHITE;
@@ -378,12 +441,21 @@ public class DRIP {
             }
         }
 
+        // Style buttons
         templateButton.setBackground(buttonBackgroundColor);
         templateButton.setForeground(buttonTextColor);
         calculateButton.setBackground(buttonBackgroundColor);
         calculateButton.setForeground(buttonTextColor);
         lightModeButton.setBackground(buttonBackgroundColor);
         lightModeButton.setForeground(buttonTextColor);
+        uploadCSVButton.setBackground(buttonBackgroundColor);
+        uploadCSVButton.setForeground(buttonTextColor);
+
+        // Style button panel
+        JPanel buttonPanel = (JPanel) lightModeButton.getParent();
+        if (buttonPanel != null) {
+            buttonPanel.setBackground(backgroundColor);
+        }
     }
 
     // Helper method to format numbers with suffixes (e.g., k, m, b)
