@@ -5,8 +5,14 @@ import java.awt.event.ActionListener;
 import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
+import org.jfree.chart.ChartFactory;
+import org.jfree.chart.ChartPanel;
+import org.jfree.chart.JFreeChart;
+import org.jfree.data.category.DefaultCategoryDataset;
 
 public class DRIP {
+    // Removed unused field 'graphFrames'
+
     public static void main(String[] args) {
         // Get screen dimensions
         Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
@@ -115,14 +121,23 @@ public class DRIP {
         buttonPanel.add(uploadCSVButton);
         buttonPanel.add(lightModeButton);
 
+        // Create placeholders for the graph panels
+        ChartPanel portfolioGraphPanel = createGraph(new ArrayList<>(), new ArrayList<>());
+        ChartPanel dividendsGraphPanel = createDividendsGraph(new ArrayList<>(), new ArrayList<>());
+
+        // Create the graph window
+        JFrame graphFrame = createGraphWindow(portfolioGraphPanel, dividendsGraphPanel);
+
         // Add panels to the frame
         frame.add(inputPanel, BorderLayout.NORTH); // Input panel at the top
         frame.add(scrollPane, BorderLayout.CENTER); // Result area in the center
         frame.add(buttonPanel, BorderLayout.SOUTH); // Buttons at the bottom
+        // Removed the undefined graphPanel reference
+        // If needed, you can add a valid component like portfolioGraphPanel or dividendsGraphPanel here
 
         // Enable Dark Mode by default
         final boolean[] isDarkMode = {true};
-        applyDarkMode(frame, inputPanel, resultArea, templateButton, calculateButton, lightModeButton, uploadCSVButton);
+        applyDarkMode(frame, inputPanel, resultArea, buttonPanel, templateButton, calculateButton, lightModeButton, uploadCSVButton, portfolioGraphPanel.getChart(), dividendsGraphPanel.getChart());
 
         // Add action listener to the Light Mode button
         lightModeButton.addActionListener(new ActionListener() {
@@ -130,10 +145,10 @@ public class DRIP {
             public void actionPerformed(ActionEvent e) {
                 isDarkMode[0] = !isDarkMode[0];
                 if (isDarkMode[0]) {
-                    applyDarkMode(frame, inputPanel, resultArea, templateButton, calculateButton, lightModeButton, uploadCSVButton);
+                    applyDarkMode(frame, inputPanel, resultArea, buttonPanel, templateButton, calculateButton, lightModeButton, uploadCSVButton, portfolioGraphPanel.getChart(), dividendsGraphPanel.getChart());
                     lightModeButton.setText("Light Mode");
                 } else {
-                    applyLightMode(frame, inputPanel, resultArea, templateButton, calculateButton, lightModeButton, uploadCSVButton);
+                    applyLightMode(frame, inputPanel, resultArea, buttonPanel, templateButton, calculateButton, lightModeButton, uploadCSVButton, portfolioGraphPanel.getChart(), dividendsGraphPanel.getChart());
                     lightModeButton.setText("Dark Mode");
                 }
             }
@@ -201,6 +216,11 @@ public class DRIP {
                     // Initialize lists to track stock purchases
                     List<Double> stockPurchasePrices = new ArrayList<>();
                     List<Integer> stockPurchaseCounts = new ArrayList<>();
+
+                    // Initialize lists for graph data
+                    List<Double> years = new ArrayList<>();
+                    List<Double> portfolioValues = new ArrayList<>();
+                    List<Double> totalDividendsPerYearList = new ArrayList<>();
 
                     // Column widths for headers
                     final int HEADER_YEAR_WIDTH = 8;
@@ -313,6 +333,11 @@ public class DRIP {
 
                         // Update total dividends
                         totalDividend += annualDividendAfterTax;
+
+                        // Add data for graph
+                        years.add(year);
+                        portfolioValues.add(portfolioValue);
+                        totalDividendsPerYearList.add(totalDividendsPerYear);
                     }
 
                     // Calculate capital gains tax
@@ -335,6 +360,37 @@ public class DRIP {
 
                     // Display the results
                     resultArea.setText(resultBuilder.toString());
+
+                    // Update the portfolio graph
+                    DefaultCategoryDataset portfolioDataset = (DefaultCategoryDataset) portfolioGraphPanel.getChart().getCategoryPlot().getDataset();
+                    portfolioDataset.clear();
+                    for (int i = 0; i < years.size(); i++) {
+                        portfolioDataset.addValue(portfolioValues.get(i), "Portfolio Value", years.get(i));
+                    }
+
+                    // Update the dividends graph
+                    DefaultCategoryDataset dividendsDataset = (DefaultCategoryDataset) dividendsGraphPanel.getChart().getCategoryPlot().getDataset();
+                    dividendsDataset.clear();
+                    for (int i = 0; i < years.size(); i++) {
+                        dividendsDataset.addValue(totalDividendsPerYearList.get(i), "Total Dividends", years.get(i));
+                    }
+
+                    // Apply dark mode to the charts if enabled
+                    if (isDarkMode[0]) {
+                        applyDarkModeToChart(portfolioGraphPanel.getChart());
+                        applyDarkModeToChart(dividendsGraphPanel.getChart());
+                    } else {
+                        applyLightModeToChart(portfolioGraphPanel.getChart());
+                        applyLightModeToChart(dividendsGraphPanel.getChart());
+                    }
+
+                    // Refresh the graphs
+                    portfolioGraphPanel.repaint();
+                    dividendsGraphPanel.repaint();
+
+                    // Show the graph window
+                    graphFrame.setVisible(true);
+
                 } catch (NumberFormatException ex) {
                     resultArea.setText("Error: Please enter numeric values for all inputs.");
                 }
@@ -384,16 +440,16 @@ public class DRIP {
         frame.setVisible(true);
     }
 
-    private static void applyDarkMode(JFrame frame, JPanel inputPanel, JTextArea resultArea, JButton templateButton, JButton calculateButton, JButton lightModeButton, JButton uploadCSVButton) {
+    private static void applyDarkMode(JFrame frame, JPanel inputPanel, JTextArea resultArea, JPanel buttonPanel, JButton templateButton, JButton calculateButton, JButton lightModeButton, JButton uploadCSVButton, JFreeChart portfolioChart, JFreeChart dividendsChart) {
         Color backgroundColor = Color.DARK_GRAY;
         Color textColor = Color.WHITE;
-        Color buttonBackgroundColor = Color.GRAY;
-        Color buttonTextColor = Color.WHITE;
 
+        // Apply dark mode to the main frame
         frame.getContentPane().setBackground(backgroundColor);
         inputPanel.setBackground(backgroundColor);
         resultArea.setBackground(backgroundColor);
         resultArea.setForeground(textColor);
+        buttonPanel.setBackground(backgroundColor);
 
         for (Component component : inputPanel.getComponents()) {
             if (component instanceof JLabel) {
@@ -404,33 +460,21 @@ public class DRIP {
             }
         }
 
-        // Style buttons
-        templateButton.setBackground(buttonBackgroundColor);
-        templateButton.setForeground(buttonTextColor);
-        calculateButton.setBackground(buttonBackgroundColor);
-        calculateButton.setForeground(buttonTextColor);
-        lightModeButton.setBackground(buttonBackgroundColor);
-        lightModeButton.setForeground(buttonTextColor);
-        uploadCSVButton.setBackground(buttonBackgroundColor);
-        uploadCSVButton.setForeground(buttonTextColor);
-
-        // Style button panel
-        JPanel buttonPanel = (JPanel) lightModeButton.getParent();
-        if (buttonPanel != null) {
-            buttonPanel.setBackground(backgroundColor);
-        }
+        // Apply dark mode to the charts
+        applyDarkModeToChart(portfolioChart);
+        applyDarkModeToChart(dividendsChart);
     }
 
-    private static void applyLightMode(JFrame frame, JPanel inputPanel, JTextArea resultArea, JButton templateButton, JButton calculateButton, JButton lightModeButton, JButton uploadCSVButton) {
+    private static void applyLightMode(JFrame frame, JPanel inputPanel, JTextArea resultArea, JPanel buttonPanel, JButton templateButton, JButton calculateButton, JButton lightModeButton, JButton uploadCSVButton, JFreeChart portfolioChart, JFreeChart dividendsChart) {
         Color backgroundColor = Color.LIGHT_GRAY;
         Color textColor = Color.BLACK;
-        Color buttonBackgroundColor = Color.WHITE;
-        Color buttonTextColor = Color.BLACK;
 
+        // Apply light mode to the main frame
         frame.getContentPane().setBackground(backgroundColor);
         inputPanel.setBackground(backgroundColor);
         resultArea.setBackground(Color.WHITE);
         resultArea.setForeground(textColor);
+        buttonPanel.setBackground(backgroundColor);
 
         for (Component component : inputPanel.getComponents()) {
             if (component instanceof JLabel) {
@@ -441,21 +485,9 @@ public class DRIP {
             }
         }
 
-        // Style buttons
-        templateButton.setBackground(buttonBackgroundColor);
-        templateButton.setForeground(buttonTextColor);
-        calculateButton.setBackground(buttonBackgroundColor);
-        calculateButton.setForeground(buttonTextColor);
-        lightModeButton.setBackground(buttonBackgroundColor);
-        lightModeButton.setForeground(buttonTextColor);
-        uploadCSVButton.setBackground(buttonBackgroundColor);
-        uploadCSVButton.setForeground(buttonTextColor);
-
-        // Style button panel
-        JPanel buttonPanel = (JPanel) lightModeButton.getParent();
-        if (buttonPanel != null) {
-            buttonPanel.setBackground(backgroundColor);
-        }
+        // Apply light mode to the charts
+        applyLightModeToChart(portfolioChart);
+        applyLightModeToChart(dividendsChart);
     }
 
     // Helper method to format numbers with suffixes (e.g., k, m, b)
@@ -473,5 +505,114 @@ public class DRIP {
 
         double scaledValue = value / Math.pow(1000, exp);
         return String.format("%.3g%s", scaledValue, suffixes[exp - 1]); // Use 3 significant figures for scaled values
+    }
+
+    // Add this method to create and display the graph
+    private static ChartPanel createGraph(List<Double> years, List<Double> portfolioValues) {
+        // Create the dataset
+        DefaultCategoryDataset dataset = new DefaultCategoryDataset();
+        for (int i = 0; i < years.size(); i++) {
+            dataset.addValue(portfolioValues.get(i), "Portfolio Value", years.get(i));
+        }
+
+        // Create the line chart
+        JFreeChart lineChart = ChartFactory.createLineChart(
+                "Portfolio Value Over Time", // Chart title
+                "Year",                     // X-axis label
+                "Portfolio Value ($)",      // Y-axis label
+                dataset                     // Data
+        );
+
+        // Customize the chart (optional, for prettiness)
+        lineChart.setBackgroundPaint(Color.WHITE);
+        lineChart.getTitle().setPaint(Color.DARK_GRAY);
+
+        // Create and return the chart panel
+        ChartPanel chartPanel = new ChartPanel(lineChart);
+        chartPanel.setPreferredSize(new Dimension(500, 350)); // Match the size of the dividends graph
+        return chartPanel;
+    }
+
+    private static ChartPanel createDividendsGraph(List<Double> years, List<Double> totalDividendsPerYear) {
+        // Create the dataset
+        DefaultCategoryDataset dataset = new DefaultCategoryDataset();
+        for (int i = 0; i < years.size(); i++) {
+            dataset.addValue(totalDividendsPerYear.get(i), "Total Dividends", years.get(i));
+        }
+
+        // Create the line chart
+        JFreeChart lineChart = ChartFactory.createLineChart(
+                "Total Dividends Over Time", // Chart title
+                "Year",                     // X-axis label
+                "Total Dividends ($)",      // Y-axis label
+                dataset                     // Data
+        );
+
+        // Customize the chart
+        lineChart.setBackgroundPaint(Color.WHITE);
+        lineChart.getTitle().setPaint(Color.DARK_GRAY);
+
+        // Create and return the chart panel
+        ChartPanel chartPanel = new ChartPanel(lineChart);
+        chartPanel.setPreferredSize(new Dimension(500, 350)); // Slightly wider
+        return chartPanel;
+    }
+
+    private static JFrame createGraphWindow(ChartPanel portfolioGraphPanel, ChartPanel dividendsGraphPanel) {
+        // Create a new frame for the graphs
+        JFrame graphFrame = new JFrame("Investment Graphs");
+        graphFrame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+        graphFrame.setLayout(new GridLayout(1, 2, 10, 10)); // 1 row, 2 columns with spacing
+        graphFrame.add(portfolioGraphPanel);
+        graphFrame.add(dividendsGraphPanel);
+        graphFrame.setSize(1100, 400); // Adjust size to fit both graphs
+        graphFrame.setLocationRelativeTo(null); // Center the graph window
+        return graphFrame;
+    }
+
+    private static void applyDarkModeToChart(JFreeChart chart) {
+        // Set chart background
+        chart.setBackgroundPaint(Color.DARK_GRAY);
+        chart.getTitle().setPaint(Color.WHITE);
+
+        // Customize the plot area
+        chart.getPlot().setBackgroundPaint(Color.BLACK);
+        chart.getPlot().setOutlinePaint(Color.WHITE);
+
+        // Customize the axis
+        if (chart.getPlot() instanceof org.jfree.chart.plot.CategoryPlot) {
+            org.jfree.chart.plot.CategoryPlot plot = (org.jfree.chart.plot.CategoryPlot) chart.getPlot();
+            plot.getDomainAxis().setLabelPaint(Color.WHITE);
+            plot.getDomainAxis().setTickLabelPaint(Color.WHITE);
+            plot.getRangeAxis().setLabelPaint(Color.WHITE);
+            plot.getRangeAxis().setTickLabelPaint(Color.WHITE);
+
+            // Customize gridlines
+            plot.setDomainGridlinePaint(Color.GRAY);
+            plot.setRangeGridlinePaint(Color.GRAY);
+        }
+    }
+
+    private static void applyLightModeToChart(JFreeChart chart) {
+        // Set chart background
+        chart.setBackgroundPaint(Color.WHITE);
+        chart.getTitle().setPaint(Color.BLACK);
+
+        // Customize the plot area
+        chart.getPlot().setBackgroundPaint(Color.LIGHT_GRAY);
+        chart.getPlot().setOutlinePaint(Color.BLACK);
+
+        // Customize the axis
+        if (chart.getPlot() instanceof org.jfree.chart.plot.CategoryPlot) {
+            org.jfree.chart.plot.CategoryPlot plot = (org.jfree.chart.plot.CategoryPlot) chart.getPlot();
+            plot.getDomainAxis().setLabelPaint(Color.BLACK);
+            plot.getDomainAxis().setTickLabelPaint(Color.BLACK);
+            plot.getRangeAxis().setLabelPaint(Color.BLACK);
+            plot.getRangeAxis().setTickLabelPaint(Color.BLACK);
+
+            // Customize gridlines
+            plot.setDomainGridlinePaint(Color.DARK_GRAY);
+            plot.setRangeGridlinePaint(Color.DARK_GRAY);
+        }
     }
 }
