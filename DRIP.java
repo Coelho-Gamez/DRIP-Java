@@ -11,7 +11,16 @@ import org.jfree.chart.JFreeChart;
 import org.jfree.data.category.DefaultCategoryDataset;
 
 public class DRIP {
-    // Removed unused field 'graphFrames'
+    // Declare variables as class-level fields
+    private static List<Double> years = new ArrayList<>();
+    private static List<Double> portfolioValues = new ArrayList<>();
+    private static List<Double> totalDividendsPerYearList = new ArrayList<>();
+    private static List<Double> stockPrices = new ArrayList<>();
+    private static List<Integer> stockAmounts = new ArrayList<>();
+    private static List<Double> individualDividends = new ArrayList<>();
+    private static List<Double> taxedIncomes = new ArrayList<>();
+    private static double inflationAdjustmentFactor;
+    private static double totalDividendsPerYear;
 
     public static void main(String[] args) {
         // Get screen dimensions
@@ -72,6 +81,9 @@ public class DRIP {
         JLabel exchangeRateLabel = new JLabel("Currency exchange rate:");
         JTextField exchangeRateField = new JTextField();
 
+        JLabel transactionFeeLabel = new JLabel("Transaction fee (%):");
+        JTextField transactionFeeField = new JTextField();
+
         // Add components to the input panel
         inputPanel.add(annualContributionLabel);
         inputPanel.add(annualContributionField);
@@ -101,12 +113,15 @@ public class DRIP {
         inputPanel.add(managementFeeField);
         inputPanel.add(exchangeRateLabel);
         inputPanel.add(exchangeRateField);
+        inputPanel.add(transactionFeeLabel);
+        inputPanel.add(transactionFeeField);
 
         // Create buttons and result area
         JButton calculateButton = new JButton("Calculate");
         JButton templateButton = new JButton("Use Template");
         JButton lightModeButton = new JButton("Light Mode");
         JButton uploadCSVButton = new JButton("Upload CSV");
+        JButton exportCSVButton = new JButton("Export to CSV");
         JTextArea resultArea = new JTextArea();
         resultArea.setEditable(false);
 
@@ -120,6 +135,7 @@ public class DRIP {
         buttonPanel.add(templateButton);
         buttonPanel.add(uploadCSVButton);
         buttonPanel.add(lightModeButton);
+        buttonPanel.add(exportCSVButton);
 
         // Create placeholders for the graph panels
         ChartPanel portfolioGraphPanel = createGraph(new ArrayList<>(), new ArrayList<>());
@@ -159,20 +175,21 @@ public class DRIP {
             @Override
             public void actionPerformed(ActionEvent e) {
                 // Pre-fill fields with example values
-                annualContributionField.setText("5000");
-                numStocksField.setText("100");
-                stockPriceField.setText("50");
-                annualDividendField.setText("3");
-                dividendFrequencyField.setText("4");
+                annualContributionField.setText("100");
+                numStocksField.setText("20");
+                stockPriceField.setText("45");
+                annualDividendField.setText("19");
+                dividendFrequencyField.setText("1");
                 holdingTimeField.setText("10");
                 stockGrowthRateField.setText("5");
-                dividendGrowthRateField.setText("2");
+                dividendGrowthRateField.setText("1");
                 taxRateField.setText("15");
                 capitalGainsTaxRateField.setText("20");
-                inflationRateField.setText("2");
+                inflationRateField.setText("8");
                 reinvestmentRateField.setText("100");
                 managementFeeField.setText("1");
                 exchangeRateField.setText("1");
+                transactionFeeField.setText("5");
                 resultArea.setText("Template values have been loaded. You can now calculate!");
             }
         });
@@ -197,12 +214,13 @@ public class DRIP {
                     double reinvestmentRate = Double.parseDouble(reinvestmentRateField.getText());
                     double managementFee = Double.parseDouble(managementFeeField.getText());
                     double exchangeRate = Double.parseDouble(exchangeRateField.getText());
+                    double transactionFee = Double.parseDouble(transactionFeeField.getText());
 
                     // Validate inputs
                     if (annualContribution < 0 || numStocks <= 0 || stockPrice <= 0 ||
                         annualDividendPercentage < 0 || dividendFrequency <= 0 || holdingTimeInYears <= 0 ||
                         stockGrowthRate < 0 || dividendGrowthRate < 0 || taxRate < 0 || capitalGainsTaxRate < 0 ||
-                        inflationRate < 0 || reinvestmentRate < 0 || managementFee < 0 || exchangeRate <= 0) {
+                        inflationRate < 0 || reinvestmentRate < 0 || managementFee < 0 || exchangeRate <= 0 || transactionFee < 0) {
                         resultArea.setText("Error: Please enter valid positive values for all inputs.");
                         return;
                     }
@@ -216,11 +234,6 @@ public class DRIP {
                     // Initialize lists to track stock purchases
                     List<Double> stockPurchasePrices = new ArrayList<>();
                     List<Integer> stockPurchaseCounts = new ArrayList<>();
-
-                    // Initialize lists for graph data
-                    List<Double> years = new ArrayList<>();
-                    List<Double> portfolioValues = new ArrayList<>();
-                    List<Double> totalDividendsPerYearList = new ArrayList<>();
 
                     // Column widths for headers
                     final int HEADER_YEAR_WIDTH = 8;
@@ -262,7 +275,7 @@ public class DRIP {
 
                         // Calculate individual dividend and total dividends
                         double individualDividend = annualDividend;
-                        double totalDividendsPerYear = individualDividend * numStocks;
+                        totalDividendsPerYear = individualDividend * numStocks;
 
                         // Apply a random dividend cut or increase (e.g., ±10%)
                         double randomDividendAdjustment = (Math.random() * 2 - 1) * 0.1;
@@ -275,7 +288,6 @@ public class DRIP {
                         double totalReinvestment = annualDividendAfterTax + annualContribution + leftoverCash;
 
                         // Deduct transaction fees (e.g., $5 per transaction)
-                        double transactionFee = 5.0;
                         if (totalReinvestment > transactionFee) {
                             totalReinvestment -= transactionFee;
                         } else {
@@ -324,20 +336,28 @@ public class DRIP {
                             adjustedYearWidth = DATA_YEAR_WIDTH; // Default width for years < 10
                         }
 
+                        // Adjust portfolio value and dividends for inflation
+                        inflationAdjustmentFactor = Math.pow(1 + inflationRate / 100, year);
+
                         // Append yearly data with adjusted column widths
                         resultBuilder.append(String.format(
                             "%-" + adjustedYearWidth + ".0f %-" + DATA_STOCK_PRICE_WIDTH + "s %-" + DATA_PORTFOLIO_VALUE_WIDTH + "s %-" + adjustedStockAmountWidth + "d %-" +
                             DATA_INDIVIDUAL_DIV_WIDTH + "s %-" + DATA_TOTAL_DIVIDENDS_WIDTH + "s %-" + DATA_TAXED_INCOME_WIDTH + "s\n",
                             year, formatNumber(stockPrice), formatNumber(portfolioValue), (int) numStocks,
-                            formatNumber(individualDividend), formatNumber(totalDividendsPerYear), formatNumber(taxedIncome)));
+                            formatNumber(individualDividend), formatNumber(totalDividendsPerYear), formatNumber(taxedIncome)
+                        ));
 
                         // Update total dividends
                         totalDividend += annualDividendAfterTax;
 
-                        // Add data for graph
+                        // Add data for graph and tracking (only once per year)
                         years.add(year);
                         portfolioValues.add(portfolioValue);
                         totalDividendsPerYearList.add(totalDividendsPerYear);
+                        stockPrices.add(stockPrice);
+                        stockAmounts.add((int) numStocks);
+                        individualDividends.add(individualDividend);
+                        taxedIncomes.add(taxedIncome);
                     }
 
                     // Calculate capital gains tax
@@ -350,6 +370,15 @@ public class DRIP {
 
                     // Deduct capital gains tax from the final portfolio value
                     totalStockValue -= capitalGainsTax;
+
+                    // Adjust total dividends for inflation
+                    totalDividendsPerYear /= inflationAdjustmentFactor; // Adjust total dividends
+
+                    // Adjust total dividends for inflation
+                    // Removed unused variable inflationAdjustedDividends
+
+                    // Adjust total dividends for inflation
+                    totalDividend /= Math.pow(1 + inflationRate / 100, holdingTimeInYears);
 
                     // Append final totals to the summary
                     resultBuilder.append("\n=== Final Totals ===\n");
@@ -409,7 +438,7 @@ public class DRIP {
                         String line;
                         while ((line = br.readLine()) != null) {
                             String[] values = line.split(","); // Assuming CSV is comma-separated
-                            if (values.length >= 14) { // Ensure all fields are present
+                            if (values.length >= 15) { // Ensure all fields are present
                                 annualContributionField.setText(values[0]);
                                 numStocksField.setText(values[1]);
                                 stockPriceField.setText(values[2]);
@@ -424,6 +453,7 @@ public class DRIP {
                                 reinvestmentRateField.setText(values[11]);
                                 managementFeeField.setText(values[12]);
                                 exchangeRateField.setText(values[13]);
+                                transactionFeeField.setText(values[14]);
                             } else {
                                 resultArea.setText("Error: CSV file does not contain enough fields.");
                             }
@@ -431,6 +461,51 @@ public class DRIP {
                         resultArea.setText("CSV data loaded successfully. You can now calculate!");
                     } catch (IOException ex) {
                         resultArea.setText("Error: Unable to read the CSV file.");
+                    }
+                }
+            }
+        });
+
+        // Add action listener to the Export CSV button
+        exportCSVButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                // Use JFileChooser to select the file location
+                JFileChooser fileChooser = new JFileChooser();
+                fileChooser.setDialogTitle("Save CSV File");
+                int userSelection = fileChooser.showSaveDialog(frame);
+
+                if (userSelection == JFileChooser.APPROVE_OPTION) {
+                    File fileToSave = fileChooser.getSelectedFile();
+
+                    // Ensure the file has a .csv extension
+                    if (!fileToSave.getName().endsWith(".csv")) {
+                        fileToSave = new File(fileToSave.getAbsolutePath() + ".csv");
+                    }
+
+                    try (FileWriter writer = new FileWriter(fileToSave)) {
+                        // Write the CSV header
+                        writer.append("Year,Stock Price,Portfolio Value,Stock Amount,Individual Dividend,Total Dividends,Taxed Income\n");
+
+                        // Write the yearly data (no duplicates)
+                        for (int i = 0; i < years.size(); i++) {
+                            writer.append(String.format(
+                                "%.0f,%.2f,%.2f,%d,%.2f,%.2f,%.2f\n",
+                                years.get(i),
+                                stockPrices.get(i),
+                                portfolioValues.get(i),
+                                stockAmounts.get(i),
+                                individualDividends.get(i),
+                                totalDividendsPerYearList.get(i),
+                                taxedIncomes.get(i)
+                            ));
+                        }
+
+                        // Notify the user that the file was saved successfully
+                        JOptionPane.showMessageDialog(frame, "CSV file saved successfully!", "Export Successful", JOptionPane.INFORMATION_MESSAGE);
+
+                    } catch (IOException ex) {
+                        JOptionPane.showMessageDialog(frame, "Error saving CSV file: " + ex.getMessage(), "Export Failed", JOptionPane.ERROR_MESSAGE);
                     }
                 }
             }
