@@ -1,4 +1,5 @@
 import javax.swing.*;
+import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -9,6 +10,8 @@ import org.jfree.chart.ChartFactory;
 import org.jfree.chart.ChartPanel;
 import org.jfree.chart.JFreeChart;
 import org.jfree.data.category.DefaultCategoryDataset;
+import com.formdev.flatlaf.FlatLightLaf;
+import com.formdev.flatlaf.FlatDarkLaf;
 
 public class DRIP {
     // Declare variables as class-level fields
@@ -19,10 +22,30 @@ public class DRIP {
     private static List<Integer> stockAmounts = new ArrayList<>();
     private static List<Double> individualDividends = new ArrayList<>();
     private static List<Double> taxedIncomes = new ArrayList<>();
-    private static double inflationAdjustmentFactor;
     private static double totalDividendsPerYear;
 
     public static void main(String[] args) {
+        try {
+            // Set FlatLaf Dark theme
+            UIManager.setLookAndFeel(new FlatDarkLaf());
+        } catch (UnsupportedLookAndFeelException ex) {
+            ex.printStackTrace();
+        }
+
+        // Apply custom UI properties
+        UIManager.put("Button.arc", 10); // Rounded buttons
+        UIManager.put("Component.arc", 10); // Rounded corners for all components
+        UIManager.put("TextComponent.arc", 5); // Rounded text fields
+        UIManager.put("Button.background", Color.DARK_GRAY); // Custom button background color
+        UIManager.put("Button.foreground", Color.WHITE); // Custom button text color
+
+        // Launch your application
+        SwingUtilities.invokeLater(() -> {
+            new DRIP().start();
+        });
+    }
+
+    public void start() {
         // Get screen dimensions
         Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
         int screenWidth = screenSize.width;
@@ -69,17 +92,11 @@ public class DRIP {
         JLabel capitalGainsTaxRateLabel = new JLabel("Capital gains tax rate (%):");
         JTextField capitalGainsTaxRateField = new JTextField();
 
-        JLabel inflationRateLabel = new JLabel("Inflation rate (%):");
-        JTextField inflationRateField = new JTextField();
-
         JLabel reinvestmentRateLabel = new JLabel("Reinvestment rate (%):");
         JTextField reinvestmentRateField = new JTextField();
 
         JLabel managementFeeLabel = new JLabel("Management fee (%):");
         JTextField managementFeeField = new JTextField();
-
-        JLabel exchangeRateLabel = new JLabel("Currency exchange rate:");
-        JTextField exchangeRateField = new JTextField();
 
         JLabel transactionFeeLabel = new JLabel("Transaction fee (%):");
         JTextField transactionFeeField = new JTextField();
@@ -105,14 +122,10 @@ public class DRIP {
         inputPanel.add(taxRateField);
         inputPanel.add(capitalGainsTaxRateLabel);
         inputPanel.add(capitalGainsTaxRateField);
-        inputPanel.add(inflationRateLabel);
-        inputPanel.add(inflationRateField);
         inputPanel.add(reinvestmentRateLabel);
         inputPanel.add(reinvestmentRateField);
         inputPanel.add(managementFeeLabel);
         inputPanel.add(managementFeeField);
-        inputPanel.add(exchangeRateLabel);
-        inputPanel.add(exchangeRateField);
         inputPanel.add(transactionFeeLabel);
         inputPanel.add(transactionFeeField);
 
@@ -129,45 +142,139 @@ public class DRIP {
         JScrollPane scrollPane = new JScrollPane(resultArea);
         scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
 
+        // Create a JTable for the yearly summary
+        String[] columnNames = {
+            "Year", "Stock Price ($)", "Portfolio Value ($)", "Stock Amount",
+            "Individual Div ($)", "Total Dividends ($)", "Taxed Income ($)"
+        };
+        DefaultTableModel tableModel = new DefaultTableModel(columnNames, 0);
+        JTable resultTable = new JTable(tableModel);
+        resultTable.setEnabled(false); // Make the table read-only
+        resultTable.setFillsViewportHeight(true);
+
+        // Wrap the JTable in a JScrollPane
+        JScrollPane tableScrollPane = new JScrollPane(resultTable);
+        tableScrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
+
+        // Create the Reset button
+        JButton resetButton = new JButton("Reset");
+        resetButton.addActionListener(e -> {
+            annualContributionField.setText("");
+            numStocksField.setText("");
+            stockPriceField.setText("");
+            annualDividendField.setText("");
+            dividendFrequencyField.setText("");
+            holdingTimeField.setText("");
+            stockGrowthRateField.setText("");
+            dividendGrowthRateField.setText("");
+            taxRateField.setText("");
+            capitalGainsTaxRateField.setText("");
+            reinvestmentRateField.setText("");
+            managementFeeField.setText("");
+            transactionFeeField.setText("");
+            resultArea.setText("");
+        });
+
         // Create a button panel
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 10));
         buttonPanel.add(calculateButton);
         buttonPanel.add(templateButton);
         buttonPanel.add(uploadCSVButton);
-        buttonPanel.add(lightModeButton);
         buttonPanel.add(exportCSVButton);
+        buttonPanel.add(lightModeButton);
+        buttonPanel.add(resetButton); // Add the Reset button here
 
-        // Create placeholders for the graph panels
-        ChartPanel portfolioGraphPanel = createGraph(new ArrayList<>(), new ArrayList<>());
-        ChartPanel dividendsGraphPanel = createDividendsGraph(new ArrayList<>(), new ArrayList<>());
+        // Create the portfolio graph
+        ChartPanel portfolioGraphPanel = createChart(
+            years, 
+            portfolioValues, 
+            "Portfolio Value Over Time", 
+            "Portfolio Value ($)", 
+            "Portfolio Value"
+        );
+
+        // Create the dividends graph
+        ChartPanel dividendsGraphPanel = createChart(
+            new ArrayList<>(), 
+            new ArrayList<>(), 
+            "Total Dividends Over Time", 
+            "Total Dividends ($)", 
+            "Total Dividends"
+        );
 
         // Create the graph window
         JFrame graphFrame = createGraphWindow(portfolioGraphPanel, dividendsGraphPanel);
 
-        // Add panels to the frame
+        // Create a panel for final totals
+        JPanel totalsPanel = new JPanel();
+        totalsPanel.setLayout(new GridLayout(0, 2, 10, 10)); // 2 columns, 10px gaps
+
+        // Add labels and placeholders for final totals
+        totalsPanel.add(new JLabel("Final Portfolio Value ($):"));
+        JLabel finalPortfolioValueLabel = new JLabel();
+        totalsPanel.add(finalPortfolioValueLabel);
+
+        totalsPanel.add(new JLabel("Total Dividends Earned ($):"));
+        JLabel totalDividendsLabel = new JLabel();
+        totalsPanel.add(totalDividendsLabel);
+
+        totalsPanel.add(new JLabel("Capital Gains Tax Paid ($):"));
+        JLabel capitalGainsTaxLabel = new JLabel();
+        totalsPanel.add(capitalGainsTaxLabel);
+
+        totalsPanel.add(new JLabel("Cost Basis ($):"));
+        JLabel costBasisLabel = new JLabel();
+        totalsPanel.add(costBasisLabel);
+
+        // Add components to the frame
         frame.add(inputPanel, BorderLayout.NORTH); // Input panel at the top
-        frame.add(scrollPane, BorderLayout.CENTER); // Result area in the center
-        frame.add(buttonPanel, BorderLayout.SOUTH); // Buttons at the bottom
-        // Removed the undefined graphPanel reference
-        // If needed, you can add a valid component like portfolioGraphPanel or dividendsGraphPanel here
+        frame.add(tableScrollPane, BorderLayout.CENTER); // Table in the center
+        frame.add(buttonPanel, BorderLayout.SOUTH); // Button panel at the bottom
 
         // Enable Dark Mode by default
         final boolean[] isDarkMode = {true};
-        applyDarkMode(frame, inputPanel, resultArea, buttonPanel, templateButton, calculateButton, lightModeButton, uploadCSVButton, portfolioGraphPanel.getChart(), dividendsGraphPanel.getChart());
+        applyDarkMode(frame);
 
-        // Add action listener to the Light Mode button
-        lightModeButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                isDarkMode[0] = !isDarkMode[0];
-                if (isDarkMode[0]) {
-                    applyDarkMode(frame, inputPanel, resultArea, buttonPanel, templateButton, calculateButton, lightModeButton, uploadCSVButton, portfolioGraphPanel.getChart(), dividendsGraphPanel.getChart());
-                    lightModeButton.setText("Light Mode");
-                } else {
-                    applyLightMode(frame, inputPanel, resultArea, buttonPanel, templateButton, calculateButton, lightModeButton, uploadCSVButton, portfolioGraphPanel.getChart(), dividendsGraphPanel.getChart());
-                    lightModeButton.setText("Dark Mode");
+        // Light/Dark Mode button action listener
+        lightModeButton.addActionListener(e -> {
+            if (isDarkMode[0]) {
+                applyLightMode(frame);
+                isDarkMode[0] = false;
+                lightModeButton.setText("Dark Mode");
+
+                // Apply Light Mode to the charts
+                applyLightModeToChart(portfolioGraphPanel.getChart());
+                applyLightModeToChart(dividendsGraphPanel.getChart());
+
+                // Update button colors to gray
+                for (Component component : buttonPanel.getComponents()) {
+                    if (component instanceof JButton) {
+                        component.setBackground(Color.LIGHT_GRAY);
+                        component.setForeground(Color.BLACK);
+                    }
+                }
+            } else {
+                applyDarkMode(frame);
+                isDarkMode[0] = true;
+                lightModeButton.setText("Light Mode");
+
+                // Apply Dark Mode to the charts
+                applyDarkModeToChart(portfolioGraphPanel.getChart());
+                applyDarkModeToChart(dividendsGraphPanel.getChart());
+
+                // Update button colors to dark gray
+                for (Component component : buttonPanel.getComponents()) {
+                    if (component instanceof JButton) {
+                        component.setBackground(Color.DARK_GRAY);
+                        component.setForeground(Color.WHITE);
+                    }
                 }
             }
+
+            // Refresh the UI
+            SwingUtilities.updateComponentTreeUI(frame);
+            portfolioGraphPanel.repaint();
+            dividendsGraphPanel.repaint();
         });
 
         // Add action listener to the Template button
@@ -185,20 +292,39 @@ public class DRIP {
                 dividendGrowthRateField.setText("1");
                 taxRateField.setText("15");
                 capitalGainsTaxRateField.setText("20");
-                inflationRateField.setText("8");
                 reinvestmentRateField.setText("100");
                 managementFeeField.setText("1");
-                exchangeRateField.setText("1");
                 transactionFeeField.setText("5");
                 resultArea.setText("Template values have been loaded. You can now calculate!");
             }
         });
 
-        // Add action listener to the Calculate button
         calculateButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
                 try {
+                    // List of input fields and their corresponding names
+                    JTextField[] fields = {
+                        annualContributionField, numStocksField, stockPriceField, annualDividendField,
+                        dividendFrequencyField, holdingTimeField, stockGrowthRateField, dividendGrowthRateField,
+                        taxRateField, capitalGainsTaxRateField, reinvestmentRateField,
+                        managementFeeField, transactionFeeField
+                    };
+                    String[] fieldNames = {
+                        "Annual contribution", "Number of stocks", "Price per stock", "Annual dividend yield",
+                        "Dividend payout frequency", "Holding time", "Annual stock price growth rate",
+                        "Annual dividend growth rate", "Tax rate on dividends", "Capital gains tax rate",
+                         "Reinvestment rate", "Management fee", "Transaction fee"
+                    };
+
+                    // Validate inputs
+                    if (!validateInputs(fields, fieldNames, resultArea)) {
+                        return; // Stop execution if validation fails
+                    }
+
+                    // Clear the table for new data
+                    tableModel.setRowCount(0);
+
                     // Read input values
                     double annualContribution = Double.parseDouble(annualContributionField.getText());
                     double numStocks = Double.parseDouble(numStocksField.getText());
@@ -210,17 +336,15 @@ public class DRIP {
                     double dividendGrowthRate = Double.parseDouble(dividendGrowthRateField.getText());
                     double taxRate = Double.parseDouble(taxRateField.getText());
                     double capitalGainsTaxRate = Double.parseDouble(capitalGainsTaxRateField.getText());
-                    double inflationRate = Double.parseDouble(inflationRateField.getText());
                     double reinvestmentRate = Double.parseDouble(reinvestmentRateField.getText());
                     double managementFee = Double.parseDouble(managementFeeField.getText());
-                    double exchangeRate = Double.parseDouble(exchangeRateField.getText());
                     double transactionFee = Double.parseDouble(transactionFeeField.getText());
 
-                    // Validate inputs
+                    // Additional validation for numeric values
                     if (annualContribution < 0 || numStocks <= 0 || stockPrice <= 0 ||
                         annualDividendPercentage < 0 || dividendFrequency <= 0 || holdingTimeInYears <= 0 ||
                         stockGrowthRate < 0 || dividendGrowthRate < 0 || taxRate < 0 || capitalGainsTaxRate < 0 ||
-                        inflationRate < 0 || reinvestmentRate < 0 || managementFee < 0 || exchangeRate <= 0 || transactionFee < 0) {
+                        reinvestmentRate < 0 || managementFee < 0 || transactionFee < 0) {
                         resultArea.setText("Error: Please enter valid positive values for all inputs.");
                         return;
                     }
@@ -235,36 +359,11 @@ public class DRIP {
                     List<Double> stockPurchasePrices = new ArrayList<>();
                     List<Integer> stockPurchaseCounts = new ArrayList<>();
 
-                    // Column widths for headers
-                    final int HEADER_YEAR_WIDTH = 8;
-                    final int HEADER_STOCK_PRICE_WIDTH = 15;
-                    final int HEADER_PORTFOLIO_VALUE_WIDTH = 20;
-                    final int HEADER_STOCK_AMOUNT_WIDTH = 15;
-                    final int HEADER_INDIVIDUAL_DIV_WIDTH = 20;
-                    final int HEADER_TOTAL_DIVIDENDS_WIDTH = 20;
-                    final int HEADER_TAXED_INCOME_WIDTH = 15;
-
-                    // Column widths for data rows
-                    final int DATA_YEAR_WIDTH = 12;
-                    final int DATA_STOCK_PRICE_WIDTH = 22;
-                    final int DATA_PORTFOLIO_VALUE_WIDTH = 25;
-                    final int DATA_STOCK_AMOUNT_WIDTH = 20;
-                    final int DATA_INDIVIDUAL_DIV_WIDTH = 23;
-                    final int DATA_TOTAL_DIVIDENDS_WIDTH = 24;
-                    final int DATA_TAXED_INCOME_WIDTH = 12;
-
-                    // Column widths for the summary data
-                    final int SUMMARY_PORTFOLIO_WIDTH = 19; // Width for "Final Portfolio Value"
-                    final int SUMMARY_DIVIDENDS_WIDTH = 15; // Width for "Total Dividends Earned"
-                    final int SUMMARY_TAX_WIDTH = 17; // Width for "Capital Gains Tax Paid"
-                    final int SUMMARY_COST_BASIS_WIDTH = 23; // Width for "Cost Basis"
-
                     // Prepare result display
                     StringBuilder resultBuilder = new StringBuilder();
                     resultBuilder.append("=== Yearly Investment Summary ===\n");
                     resultBuilder.append(String.format(
-                        "%-" + HEADER_YEAR_WIDTH + "s %-" + HEADER_STOCK_PRICE_WIDTH + "s %-" + HEADER_PORTFOLIO_VALUE_WIDTH + "s %-" + HEADER_STOCK_AMOUNT_WIDTH + "s %-" +
-                        HEADER_INDIVIDUAL_DIV_WIDTH + "s %-" + HEADER_TOTAL_DIVIDENDS_WIDTH + "s %-" + HEADER_TAXED_INCOME_WIDTH + "s\n",
+                        "%-8s %-15s %-20s %-15s %-20s %-20s %-15s\n",
                         "Year", "Stock Price", "Portfolio Value", "Stock Amount",
                         "Individual Div", "Total Dividends", "Taxed Income"));
 
@@ -276,10 +375,6 @@ public class DRIP {
                         // Calculate individual dividend and total dividends
                         double individualDividend = annualDividend;
                         totalDividendsPerYear = individualDividend * numStocks;
-
-                        // Apply a random dividend cut or increase (e.g., ±10%)
-                        double randomDividendAdjustment = (Math.random() * 2 - 1) * 0.1;
-                        annualDividend *= (1 + randomDividendAdjustment);
 
                         // Calculate dividends after tax
                         double annualDividendAfterTax = totalDividendsPerYear * (1 - taxRate / 100);
@@ -301,10 +396,10 @@ public class DRIP {
                             stockPurchasePrices.add(stockPrice); // Record the price of the new stocks
                             stockPurchaseCounts.add(newStocks); // Record the number of new stocks
                         }
-                        leftoverCash = totalReinvestment - (newStocks * stockPrice); // Update leftover cash
-                        numStocks += newStocks; // Add the new stocks to the total stock count
 
                         // Update the remaining stock value after purchasing new stocks
+                        leftoverCash = totalReinvestment - (newStocks * stockPrice); // Update leftover cash
+                        numStocks += newStocks; // Add the new stocks to the total stock count
                         totalStockValue = numStocks * stockPrice;
 
                         // Deduct management fee from the total stock value
@@ -323,41 +418,33 @@ public class DRIP {
                         // Calculate taxed income (dividends after tax)
                         double taxedIncome = annualDividendAfterTax;
 
-                        // Adjust stock amount column width dynamically if stock amount >= 1000
-                        int adjustedStockAmountWidth = (numStocks >= 1000) ? DATA_STOCK_AMOUNT_WIDTH - 1 : DATA_STOCK_AMOUNT_WIDTH;
-
-                        // Adjust year column width dynamically if year >= 10 or year >= 100
-                        int adjustedYearWidth;
-                        if (year >= 100) {
-                            adjustedYearWidth = DATA_YEAR_WIDTH - 2; // Reduce width by 2 for years >= 100
-                        } else if (year >= 10) {
-                            adjustedYearWidth = DATA_YEAR_WIDTH - 1; // Reduce width by 1 for years >= 10
-                        } else {
-                            adjustedYearWidth = DATA_YEAR_WIDTH; // Default width for years < 10
-                        }
-
-                        // Adjust portfolio value and dividends for inflation
-                        inflationAdjustmentFactor = Math.pow(1 + inflationRate / 100, year);
-
                         // Append yearly data with adjusted column widths
                         resultBuilder.append(String.format(
-                            "%-" + adjustedYearWidth + ".0f %-" + DATA_STOCK_PRICE_WIDTH + "s %-" + DATA_PORTFOLIO_VALUE_WIDTH + "s %-" + adjustedStockAmountWidth + "d %-" +
-                            DATA_INDIVIDUAL_DIV_WIDTH + "s %-" + DATA_TOTAL_DIVIDENDS_WIDTH + "s %-" + DATA_TAXED_INCOME_WIDTH + "s\n",
+                            "%-8.0f %-15s %-20s %-15d %-20s %-20s %-15s\n",
                             year, formatNumber(stockPrice), formatNumber(portfolioValue), (int) numStocks,
                             formatNumber(individualDividend), formatNumber(totalDividendsPerYear), formatNumber(taxedIncome)
                         ));
 
-                        // Update total dividends
-                        totalDividend += annualDividendAfterTax;
-
                         // Add data for graph and tracking (only once per year)
                         years.add(year);
                         portfolioValues.add(portfolioValue);
+
                         totalDividendsPerYearList.add(totalDividendsPerYear);
                         stockPrices.add(stockPrice);
                         stockAmounts.add((int) numStocks);
                         individualDividends.add(individualDividend);
                         taxedIncomes.add(taxedIncome);
+
+                        // Add data to the table
+                        tableModel.addRow(new Object[]{
+                            year,
+                            formatNumber(stockPrice),
+                            formatNumber(portfolioValue),
+                            (int) numStocks,
+                            formatNumber(individualDividend),
+                            formatNumber(totalDividendsPerYear),
+                            formatNumber(taxedIncome)
+                        });
                     }
 
                     // Calculate capital gains tax
@@ -371,21 +458,18 @@ public class DRIP {
                     // Deduct capital gains tax from the final portfolio value
                     totalStockValue -= capitalGainsTax;
 
-                    // Adjust total dividends for inflation
-                    totalDividendsPerYear /= inflationAdjustmentFactor; // Adjust total dividends
-
-                    // Adjust total dividends for inflation
-                    // Removed unused variable inflationAdjustedDividends
-
-                    // Adjust total dividends for inflation
-                    totalDividend /= Math.pow(1 + inflationRate / 100, holdingTimeInYears);
-
                     // Append final totals to the summary
                     resultBuilder.append("\n=== Final Totals ===\n");
-                    resultBuilder.append(String.format("%-25s %" + SUMMARY_PORTFOLIO_WIDTH + "s\n", "Final Portfolio Value:", formatNumber(totalStockValue)));
-                    resultBuilder.append(String.format("%-25s %" + SUMMARY_DIVIDENDS_WIDTH + "s\n", "Total Dividends Earned:", formatNumber(totalDividend)));
-                    resultBuilder.append(String.format("%-25s %" + SUMMARY_TAX_WIDTH + "s\n", "Capital Gains Tax Paid:", formatNumber(capitalGainsTax)));
-                    resultBuilder.append(String.format("%-25s %" + SUMMARY_COST_BASIS_WIDTH + "s\n", "Cost Basis:", formatNumber(totalCostBasis)));
+                    resultBuilder.append(String.format("%-25s %19s\n", "Final Portfolio Value:", formatNumber(totalStockValue)));
+                    resultBuilder.append(String.format("%-25s %15s\n", "Total Dividends Earned:", formatNumber(totalDividend)));
+                    resultBuilder.append(String.format("%-25s %17s\n", "Capital Gains Tax Paid:", formatNumber(capitalGainsTax)));
+                    resultBuilder.append(String.format("%-25s %23s\n", "Cost Basis:", formatNumber(totalCostBasis)));
+
+                    // Update totals panel labels
+                    finalPortfolioValueLabel.setText(formatNumber(totalStockValue));
+                    totalDividendsLabel.setText(formatNumber(totalDividend));
+                    capitalGainsTaxLabel.setText(formatNumber(capitalGainsTax));
+                    costBasisLabel.setText(formatNumber(totalCostBasis));
 
                     // Display the results
                     resultArea.setText(resultBuilder.toString());
@@ -438,7 +522,7 @@ public class DRIP {
                         String line;
                         while ((line = br.readLine()) != null) {
                             String[] values = line.split(","); // Assuming CSV is comma-separated
-                            if (values.length >= 15) { // Ensure all fields are present
+                            if (values.length >= 14) { // Ensure all fields are present
                                 annualContributionField.setText(values[0]);
                                 numStocksField.setText(values[1]);
                                 stockPriceField.setText(values[2]);
@@ -449,16 +533,14 @@ public class DRIP {
                                 dividendGrowthRateField.setText(values[7]);
                                 taxRateField.setText(values[8]);
                                 capitalGainsTaxRateField.setText(values[9]);
-                                inflationRateField.setText(values[10]);
                                 reinvestmentRateField.setText(values[11]);
                                 managementFeeField.setText(values[12]);
-                                exchangeRateField.setText(values[13]);
-                                transactionFeeField.setText(values[14]);
+                                transactionFeeField.setText(values[13]);
+                                resultArea.setText("CSV data loaded successfully. You can now calculate!");
                             } else {
                                 resultArea.setText("Error: CSV file does not contain enough fields.");
                             }
                         }
-                        resultArea.setText("CSV data loaded successfully. You can now calculate!");
                     } catch (IOException ex) {
                         resultArea.setText("Error: Unable to read the CSV file.");
                     }
@@ -470,11 +552,9 @@ public class DRIP {
         exportCSVButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                // Use JFileChooser to select the file location
                 JFileChooser fileChooser = new JFileChooser();
                 fileChooser.setDialogTitle("Save CSV File");
                 int userSelection = fileChooser.showSaveDialog(frame);
-
                 if (userSelection == JFileChooser.APPROVE_OPTION) {
                     File fileToSave = fileChooser.getSelectedFile();
 
@@ -503,7 +583,6 @@ public class DRIP {
 
                         // Notify the user that the file was saved successfully
                         JOptionPane.showMessageDialog(frame, "CSV file saved successfully!", "Export Successful", JOptionPane.INFORMATION_MESSAGE);
-
                     } catch (IOException ex) {
                         JOptionPane.showMessageDialog(frame, "Error saving CSV file: " + ex.getMessage(), "Export Failed", JOptionPane.ERROR_MESSAGE);
                     }
@@ -515,57 +594,77 @@ public class DRIP {
         frame.setVisible(true);
     }
 
-    private static void applyDarkMode(JFrame frame, JPanel inputPanel, JTextArea resultArea, JPanel buttonPanel, JButton templateButton, JButton calculateButton, JButton lightModeButton, JButton uploadCSVButton, JFreeChart portfolioChart, JFreeChart dividendsChart) {
-        Color backgroundColor = Color.DARK_GRAY;
-        Color textColor = Color.WHITE;
-
-        // Apply dark mode to the main frame
-        frame.getContentPane().setBackground(backgroundColor);
-        inputPanel.setBackground(backgroundColor);
-        resultArea.setBackground(backgroundColor);
-        resultArea.setForeground(textColor);
-        buttonPanel.setBackground(backgroundColor);
-
-        for (Component component : inputPanel.getComponents()) {
-            if (component instanceof JLabel) {
-                component.setForeground(textColor);
-            } else if (component instanceof JTextField) {
-                component.setBackground(backgroundColor);
-                component.setForeground(textColor);
-            }
+    // Simplified Dark Mode and Light Mode methods
+    private static void applyDarkMode(JFrame frame) {
+        try {
+            UIManager.setLookAndFeel(new FlatDarkLaf());
+            SwingUtilities.updateComponentTreeUI(frame); // Refresh the UI
+        } catch (UnsupportedLookAndFeelException ex) {
+            ex.printStackTrace();
         }
-
-        // Apply dark mode to the charts
-        applyDarkModeToChart(portfolioChart);
-        applyDarkModeToChart(dividendsChart);
     }
 
-    private static void applyLightMode(JFrame frame, JPanel inputPanel, JTextArea resultArea, JPanel buttonPanel, JButton templateButton, JButton calculateButton, JButton lightModeButton, JButton uploadCSVButton, JFreeChart portfolioChart, JFreeChart dividendsChart) {
-        Color backgroundColor = Color.LIGHT_GRAY;
-        Color textColor = Color.BLACK;
-
-        // Apply light mode to the main frame
-        frame.getContentPane().setBackground(backgroundColor);
-        inputPanel.setBackground(backgroundColor);
-        resultArea.setBackground(Color.WHITE);
-        resultArea.setForeground(textColor);
-        buttonPanel.setBackground(backgroundColor);
-
-        for (Component component : inputPanel.getComponents()) {
-            if (component instanceof JLabel) {
-                component.setForeground(textColor);
-            } else if (component instanceof JTextField) {
-                component.setBackground(Color.WHITE);
-                component.setForeground(textColor);
-            }
+    private static void applyLightMode(JFrame frame) {
+        try {
+            UIManager.setLookAndFeel(new FlatLightLaf());
+            SwingUtilities.updateComponentTreeUI(frame); // Refresh the UI
+        } catch (UnsupportedLookAndFeelException ex) {
+            ex.printStackTrace();
         }
-
-        // Apply light mode to the charts
-        applyLightModeToChart(portfolioChart);
-        applyLightModeToChart(dividendsChart);
     }
 
-    // Helper method to format numbers with suffixes (e.g., k, m, b)
+    private static void applyDarkModeToChart(JFreeChart chart) {
+        // Set static colors for dark mode
+        chart.setBackgroundPaint(Color.DARK_GRAY);
+        chart.getTitle().setPaint(Color.WHITE);
+
+        if (chart.getPlot() instanceof org.jfree.chart.plot.CategoryPlot) {
+            org.jfree.chart.plot.CategoryPlot plot = (org.jfree.chart.plot.CategoryPlot) chart.getPlot();
+            plot.setBackgroundPaint(Color.BLACK); // Static dark background
+            plot.setOutlinePaint(Color.WHITE); // Static outline color
+            plot.getDomainAxis().setLabelPaint(Color.WHITE); // Static axis label color
+            plot.getDomainAxis().setTickLabelPaint(Color.WHITE); // Static tick label color
+            plot.getRangeAxis().setLabelPaint(Color.WHITE); // Static range axis label color
+            plot.getRangeAxis().setTickLabelPaint(Color.WHITE); // Static range tick label color
+            plot.setDomainGridlinePaint(Color.GRAY); // Static gridline color
+            plot.setRangeGridlinePaint(Color.GRAY); // Static gridline color
+
+            // Set static renderer colors
+            org.jfree.chart.renderer.category.LineAndShapeRenderer renderer = new org.jfree.chart.renderer.category.LineAndShapeRenderer(true, true);
+            renderer.setSeriesPaint(0, Color.CYAN); // Static line color for series 0
+            renderer.setBaseToolTipGenerator(new org.jfree.chart.labels.StandardCategoryToolTipGenerator(
+                "{0}: Year {1}, Value {2}", java.text.NumberFormat.getInstance()
+            ));
+            plot.setRenderer(renderer);
+        }
+    }
+
+    private static void applyLightModeToChart(JFreeChart chart) {
+        // Set static colors for light mode
+        chart.setBackgroundPaint(Color.WHITE);
+        chart.getTitle().setPaint(Color.BLACK);
+
+        if (chart.getPlot() instanceof org.jfree.chart.plot.CategoryPlot) {
+            org.jfree.chart.plot.CategoryPlot plot = (org.jfree.chart.plot.CategoryPlot) chart.getPlot();
+            plot.setBackgroundPaint(Color.LIGHT_GRAY); // Static light background
+            plot.setOutlinePaint(Color.BLACK); // Static outline color
+            plot.getDomainAxis().setLabelPaint(Color.BLACK); // Static axis label color
+            plot.getDomainAxis().setTickLabelPaint(Color.BLACK); // Static tick label color
+            plot.getRangeAxis().setLabelPaint(Color.BLACK); // Static range axis label color
+            plot.getRangeAxis().setTickLabelPaint(Color.BLACK); // Static range tick label color
+            plot.setDomainGridlinePaint(Color.DARK_GRAY); // Static gridline color
+            plot.setRangeGridlinePaint(Color.DARK_GRAY); // Static gridline color
+
+            // Set static renderer colors
+            org.jfree.chart.renderer.category.LineAndShapeRenderer renderer = new org.jfree.chart.renderer.category.LineAndShapeRenderer(true, true);
+            renderer.setSeriesPaint(0, Color.BLUE); // Static line color for series 0
+            renderer.setBaseToolTipGenerator(new org.jfree.chart.labels.StandardCategoryToolTipGenerator(
+                "{0}: Year {1}, Value {2}", java.text.NumberFormat.getInstance()
+            ));
+            plot.setRenderer(renderer);
+        }
+    }
+
     private static String formatNumber(double value) {
         if (value < 1000) {
             return String.format("%.4g", value); // Use 4 significant figures for small numbers
@@ -582,54 +681,56 @@ public class DRIP {
         return String.format("%.3g%s", scaledValue, suffixes[exp - 1]); // Use 3 significant figures for scaled values
     }
 
-    // Add this method to create and display the graph
-    private static ChartPanel createGraph(List<Double> years, List<Double> portfolioValues) {
+    private static ChartPanel createChart(List<Double> years, List<Double> values, String chartTitle, String yAxisLabel, String datasetLabel) {
         // Create the dataset
         DefaultCategoryDataset dataset = new DefaultCategoryDataset();
         for (int i = 0; i < years.size(); i++) {
-            dataset.addValue(portfolioValues.get(i), "Portfolio Value", years.get(i));
+            dataset.addValue(values.get(i), datasetLabel, years.get(i));
         }
 
         // Create the line chart
         JFreeChart lineChart = ChartFactory.createLineChart(
-                "Portfolio Value Over Time", // Chart title
-                "Year",                     // X-axis label
-                "Portfolio Value ($)",      // Y-axis label
-                dataset                     // Data
-        );
-
-        // Customize the chart (optional, for prettiness)
-        lineChart.setBackgroundPaint(Color.WHITE);
-        lineChart.getTitle().setPaint(Color.DARK_GRAY);
-
-        // Create and return the chart panel
-        ChartPanel chartPanel = new ChartPanel(lineChart);
-        chartPanel.setPreferredSize(new Dimension(500, 350)); // Match the size of the dividends graph
-        return chartPanel;
-    }
-
-    private static ChartPanel createDividendsGraph(List<Double> years, List<Double> totalDividendsPerYear) {
-        // Create the dataset
-        DefaultCategoryDataset dataset = new DefaultCategoryDataset();
-        for (int i = 0; i < years.size(); i++) {
-            dataset.addValue(totalDividendsPerYear.get(i), "Total Dividends", years.get(i));
-        }
-
-        // Create the line chart
-        JFreeChart lineChart = ChartFactory.createLineChart(
-                "Total Dividends Over Time", // Chart title
-                "Year",                     // X-axis label
-                "Total Dividends ($)",      // Y-axis label
-                dataset                     // Data
+                chartTitle,  // Chart title
+                "Year",      // X-axis label
+                yAxisLabel,  // Y-axis label
+                dataset      // Data
         );
 
         // Customize the chart
         lineChart.setBackgroundPaint(Color.WHITE);
         lineChart.getTitle().setPaint(Color.DARK_GRAY);
 
-        // Create and return the chart panel
+        // Customize the plot
+        org.jfree.chart.plot.CategoryPlot plot = (org.jfree.chart.plot.CategoryPlot) lineChart.getPlot();
+        plot.setBackgroundPaint(Color.LIGHT_GRAY);
+        plot.setDomainGridlinePaint(Color.DARK_GRAY);
+        plot.setRangeGridlinePaint(Color.DARK_GRAY);
+
+        // Customize the renderer
+        org.jfree.chart.renderer.category.LineAndShapeRenderer renderer = new org.jfree.chart.renderer.category.LineAndShapeRenderer(true, true);
+        renderer.setBaseToolTipGenerator(new org.jfree.chart.labels.StandardCategoryToolTipGenerator(
+            "{0}: Year {1}, Value {2}", java.text.NumberFormat.getInstance()
+        ));
+        plot.setRenderer(renderer);
+
+        // Customize the axes
+        org.jfree.chart.axis.CategoryAxis xAxis = plot.getDomainAxis();
+        xAxis.setCategoryMargin(0.1);
+        xAxis.setLabelPaint(Color.DARK_GRAY);
+        xAxis.setTickLabelPaint(Color.DARK_GRAY);
+
+        org.jfree.chart.axis.NumberAxis yAxis = (org.jfree.chart.axis.NumberAxis) plot.getRangeAxis();
+        yAxis.setLabelPaint(Color.DARK_GRAY);
+        yAxis.setTickLabelPaint(Color.DARK_GRAY);
+
+        // Create the chart panel
         ChartPanel chartPanel = new ChartPanel(lineChart);
-        chartPanel.setPreferredSize(new Dimension(500, 350)); // Slightly wider
+        chartPanel.setPreferredSize(new Dimension(500, 350));
+        chartPanel.setMouseWheelEnabled(true);
+
+        // Explicitly enable tooltips
+        chartPanel.setDisplayToolTips(true);
+
         return chartPanel;
     }
 
@@ -645,49 +746,21 @@ public class DRIP {
         return graphFrame;
     }
 
-    private static void applyDarkModeToChart(JFreeChart chart) {
-        // Set chart background
-        chart.setBackgroundPaint(Color.DARK_GRAY);
-        chart.getTitle().setPaint(Color.WHITE);
-
-        // Customize the plot area
-        chart.getPlot().setBackgroundPaint(Color.BLACK);
-        chart.getPlot().setOutlinePaint(Color.WHITE);
-
-        // Customize the axis
-        if (chart.getPlot() instanceof org.jfree.chart.plot.CategoryPlot) {
-            org.jfree.chart.plot.CategoryPlot plot = (org.jfree.chart.plot.CategoryPlot) chart.getPlot();
-            plot.getDomainAxis().setLabelPaint(Color.WHITE);
-            plot.getDomainAxis().setTickLabelPaint(Color.WHITE);
-            plot.getRangeAxis().setLabelPaint(Color.WHITE);
-            plot.getRangeAxis().setTickLabelPaint(Color.WHITE);
-
-            // Customize gridlines
-            plot.setDomainGridlinePaint(Color.GRAY);
-            plot.setRangeGridlinePaint(Color.GRAY);
+    private static boolean validateInputs(JTextField[] fields, String[] fieldNames, JTextArea resultArea) {
+        for (int i = 0; i < fields.length; i++) {
+            if (isFieldEmpty(fields[i])) {
+                showError(resultArea, fieldNames[i] + " is required.");
+                return false;
+            }
         }
+        return true;
     }
 
-    private static void applyLightModeToChart(JFreeChart chart) {
-        // Set chart background
-        chart.setBackgroundPaint(Color.WHITE);
-        chart.getTitle().setPaint(Color.BLACK);
+    private static boolean isFieldEmpty(JTextField field) {
+        return field.getText().trim().isEmpty();
+    }
 
-        // Customize the plot area
-        chart.getPlot().setBackgroundPaint(Color.LIGHT_GRAY);
-        chart.getPlot().setOutlinePaint(Color.BLACK);
-
-        // Customize the axis
-        if (chart.getPlot() instanceof org.jfree.chart.plot.CategoryPlot) {
-            org.jfree.chart.plot.CategoryPlot plot = (org.jfree.chart.plot.CategoryPlot) chart.getPlot();
-            plot.getDomainAxis().setLabelPaint(Color.BLACK);
-            plot.getDomainAxis().setTickLabelPaint(Color.BLACK);
-            plot.getRangeAxis().setLabelPaint(Color.BLACK);
-            plot.getRangeAxis().setTickLabelPaint(Color.BLACK);
-
-            // Customize gridlines
-            plot.setDomainGridlinePaint(Color.DARK_GRAY);
-            plot.setRangeGridlinePaint(Color.DARK_GRAY);
-        }
+    private static void showError(JTextArea resultArea, String message) {
+        resultArea.setText("Error: " + message);
     }
 }

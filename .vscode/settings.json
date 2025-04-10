@@ -1,6 +1,7 @@
 {
     "java.debug.settings.onBuildFailureProceed": true,
     "java.project.referencedLibraries": [
-        "/home/coelho/Documents/DRIP Java/jfreechart-1.0.19/*.jar"
+        "/home/coelho/Documents/DRIP Java/jfreechart-1.0.19/*.jar",
+        "/home/coelho/Documents/DRIP Java/flatlaf-3.5.4.jar"
     ]
 }
